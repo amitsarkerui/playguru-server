@@ -34,11 +34,15 @@ async function run() {
     );
 
     const classesCollection = client.db("playGuru").collection("classes");
+    const usersCollection = client.db("playGuru").collection("users");
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
       res.send(result);
     });
-
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
     app.get("/", (req, res) => {
       res.send("Guru is running...");
     });
