@@ -55,6 +55,30 @@ async function run() {
       const result = await usersCollection.findOne(query);
       res.send(result);
     });
+
+    // specific classes
+    app.get("/classes/:id", async (req, res) => {
+      const id = req.params.id;
+      // console.log(id);
+      const query = { _id: id };
+      const result = await classesCollection.findOne(query);
+      res.send(result);
+    });
+
+    // Post signing user data
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email };
+      const existingUser = await usersCollection.findOne(query);
+
+      if (existingUser) {
+        return res.send({ message: "user already exists" });
+      }
+
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+
     app.get("/", (req, res) => {
       res.send("Guru is running...");
     });
