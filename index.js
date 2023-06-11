@@ -35,6 +35,7 @@ async function run() {
     // DB Collection connect
     const classesCollection = client.db("playGuru").collection("classes");
     const usersCollection = client.db("playGuru").collection("users");
+    const cartCollection = client.db("playGuru").collection("carts");
 
     // Load all classes
     app.get("/classes", async (req, res) => {
@@ -77,6 +78,23 @@ async function run() {
 
       const result = await usersCollection.insertOne(user);
       res.send(result);
+    });
+
+    // Cart post
+    app.post("/carts", async (req, res) => {
+      const item = req.body;
+      const result = await cartCollection.insertOne(item);
+      res.send(result);
+    });
+    // cart get by email
+    app.get("/carts", async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        res.send([]);
+      }
+      const query = { email: email };
+      const queryResult = await cartCollection.find(query).toArray();
+      res.send(queryResult);
     });
 
     app.get("/", (req, res) => {
