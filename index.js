@@ -5,11 +5,12 @@ const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 3030;
 require("dotenv").config();
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 
 const corsConfig = {
   origin: "*",
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
 };
 app.use(cors(corsConfig));
 app.use(express.json());
@@ -56,6 +57,7 @@ async function run() {
     const classesCollection = client.db("playGuru").collection("classes");
     const usersCollection = client.db("playGuru").collection("users");
     const cartCollection = client.db("playGuru").collection("carts");
+    const paymentCollection = client.db("playGuru").collection("payments");
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -115,7 +117,7 @@ async function run() {
     app.get("/classes/:id", async (req, res) => {
       const id = req.params.id;
       // console.log(id);
-      const query = { _id: id };
+      const query = { _id: new ObjectId(id) };
       const result = await classesCollection.findOne(query);
       res.send(result);
     });
@@ -132,6 +134,35 @@ async function run() {
 
       const result = await usersCollection.insertOne(user);
       res.send(result);
+    });
+
+    // payment intent
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    // payment api
+    app.post("/payments", verifyJWT, async (req, res) => {
+      const payment = req.body;
+      console.log(payment.cartId);
+      const insertResult = await paymentCollection.insertOne(payment);
+
+      const query = {
+        _id: new ObjectId(payment.cartId),
+      };
+      const deleteResult = await cartCollection.deleteOne(query);
+
+      res.send({ insertResult, deleteResult });
     });
 
     // Cart post
@@ -165,6 +196,31 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await cartCollection.deleteOne(query);
       res.send(result);
+    });
+
+    // Update student enrollment
+    app.patch("/classes/:id", verifyJWT, async (req, res) => {
+      const body = req.body;
+      console.log(body);
+      const id = req.params.id;
+      console.log("hating Update enrollment", id);
+      const query = { _id: new ObjectId(id) };
+      const update = { $inc: { enrolledStudents: 1 } };
+      // const options = { upsert: true };
+      // const update = {
+      //   $set: {
+      //     enrolledStudents: body.enrolledStudents,
+      //   },
+      // };
+
+      try {
+        const result = await classesCollection.updateOne(query, update);
+        console.log(result);
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: true, message: "Server error" });
+      }
     });
 
     app.get("/", (req, res) => {
