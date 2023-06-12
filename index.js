@@ -12,8 +12,28 @@ const corsConfig = {
   methods: ["GET", "POST", "PUT", "DELETE"],
 };
 app.use(cors(corsConfig));
-
 app.use(express.json());
+
+// Verify JWT Function
+const verifyJWT = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res
+      .status(401)
+      .send({ error: true, message: "unauthorized access" });
+  }
+  const token = authorization.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN, (error, decoded) => {
+    console.log(error);
+    if (error) {
+      return res
+        .status(401)
+        .send({ error: true, message: "unauthorized access 2" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USERS}:${process.env.DB_PASS}@cluster0.pq4nrld.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -36,6 +56,40 @@ async function run() {
     const classesCollection = client.db("playGuru").collection("classes");
     const usersCollection = client.db("playGuru").collection("users");
     const cartCollection = client.db("playGuru").collection("carts");
+
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN, {
+        expiresIn: "10h",
+      });
+
+      res.send({ token });
+    });
+
+    //CheckAdmin
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      if (user?.role !== "admin") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden message" });
+      }
+      next();
+    };
+    // Check Instructor
+    const verifyInstructor = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      if (user?.role !== "instructor") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden message" });
+      }
+      next();
+    };
 
     // Load all classes
     app.get("/classes", async (req, res) => {
@@ -87,14 +141,30 @@ async function run() {
       res.send(result);
     });
     // cart get by email
-    app.get("/carts", async (req, res) => {
+    app.get("/carts", verifyJWT, async (req, res) => {
       const email = req.query.email;
+      // console.log(email);
       if (!email) {
         res.send([]);
+      }
+
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
       }
       const query = { email: email };
       const queryResult = await cartCollection.find(query).toArray();
       res.send(queryResult);
+    });
+
+    // Delete Cart
+    app.delete("/carts/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await cartCollection.deleteOne(query);
+      res.send(result);
     });
 
     app.get("/", (req, res) => {
