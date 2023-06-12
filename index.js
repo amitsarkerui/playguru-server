@@ -58,6 +58,9 @@ async function run() {
     const usersCollection = client.db("playGuru").collection("users");
     const cartCollection = client.db("playGuru").collection("carts");
     const paymentCollection = client.db("playGuru").collection("payments");
+    const selectedClassCollection = client
+      .db("playGuru")
+      .collection("selectedClass");
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -163,6 +166,15 @@ async function run() {
       const deleteResult = await cartCollection.deleteOne(query);
 
       res.send({ insertResult, deleteResult });
+    });
+
+    // selected Class
+    app.post("/selectedClass", verifyJWT, async (req, res) => {
+      const selectedClass = req.body;
+      const insertResult = await selectedClassCollection.insertOne(
+        selectedClass
+      );
+      res.send(insertResult);
     });
 
     // Cart post
