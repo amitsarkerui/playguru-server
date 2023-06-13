@@ -115,7 +115,7 @@ async function run() {
       const email = req.params.email;
 
       if (req.decoded.email !== email) {
-        res.send({ admin: false });
+        res.send({ instructor: false });
       }
 
       const query = { email: email };
@@ -127,6 +127,14 @@ async function run() {
     // Load all classes
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
+      res.send(result);
+    });
+
+    // Post classes
+    app.post("/classes", async (req, res) => {
+      const classes = req.body;
+      console.log(classes);
+      const result = await classesCollection.insertOne(classes);
       res.send(result);
     });
 
@@ -299,6 +307,31 @@ async function run() {
       const query = { email: email };
       const queryResult = await paymentCollection.find(query).toArray();
       res.send(queryResult);
+    });
+
+    // Update user role
+    app.patch("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const { role } = req.body;
+
+      try {
+        const query = { _id: new ObjectId(id) };
+        const update = { $set: { role } };
+
+        const result = await usersCollection.updateOne(query, update);
+
+        if (result.modifiedCount === 1) {
+          res.send({
+            success: true,
+            message: "User role updated successfully",
+          });
+        } else {
+          res.status(404).send({ success: false, message: "User not found" });
+        }
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ success: false, message: "Server error" });
+      }
     });
 
     app.get("/", (req, res) => {
