@@ -58,9 +58,9 @@ async function run() {
     const usersCollection = client.db("playGuru").collection("users");
     const cartCollection = client.db("playGuru").collection("carts");
     const paymentCollection = client.db("playGuru").collection("payments");
-    const selectedClassCollection = client
+    const enrollmentClassCollection = client
       .db("playGuru")
-      .collection("selectedClass");
+      .collection("enrollmentClass");
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -168,11 +168,11 @@ async function run() {
       res.send({ insertResult, deleteResult });
     });
 
-    // selected Class
-    app.post("/selectedClass", verifyJWT, async (req, res) => {
-      const selectedClass = req.body;
-      const insertResult = await selectedClassCollection.insertOne(
-        selectedClass
+    // enrollment Class
+    app.post("/enrollmentClass", verifyJWT, async (req, res) => {
+      const enrollmentClass = req.body;
+      const insertResult = await enrollmentClassCollection.insertOne(
+        enrollmentClass
       );
       res.send(insertResult);
     });
@@ -233,6 +233,24 @@ async function run() {
         console.error(error);
         res.status(500).send({ error: true, message: "Server error" });
       }
+    });
+
+    app.get("/enrollClass", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      // console.log(email);
+      if (!email) {
+        res.send([]);
+      }
+
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+      const query = { email: email };
+      const queryResult = await enrollmentClassCollection.find(query).toArray();
+      res.send(queryResult);
     });
 
     app.get("/", (req, res) => {
