@@ -49,7 +49,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
@@ -235,6 +235,7 @@ async function run() {
       }
     });
 
+    // Enroller student
     app.get("/enrollClass", verifyJWT, async (req, res) => {
       const email = req.query.email;
       // console.log(email);
@@ -250,6 +251,25 @@ async function run() {
       }
       const query = { email: email };
       const queryResult = await enrollmentClassCollection.find(query).toArray();
+      res.send(queryResult);
+    });
+
+    // Payment data api
+    app.get("/payment", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      // console.log(email);
+      if (!email) {
+        res.send([]);
+      }
+
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+      const query = { email: email };
+      const queryResult = await paymentCollection.find(query).toArray();
       res.send(queryResult);
     });
 
