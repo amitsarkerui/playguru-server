@@ -124,6 +124,20 @@ async function run() {
       res.send(result);
     });
 
+    //Student
+    app.get("/users/student/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+
+      if (req.decoded.email !== email) {
+        res.send({ student: false });
+      }
+
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { student: user?.role === "student" };
+      res.send(result);
+    });
+
     // Load all classes
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
@@ -246,21 +260,22 @@ async function run() {
       res.send(result);
     });
 
-    // Update student enrollment
+    // Update student enrollment, status, and feedback
     app.patch("/classes/:id", verifyJWT, async (req, res) => {
       const body = req.body;
-      console.log(body);
       const id = req.params.id;
-      console.log("hating Update enrollment", id);
-      const query = { _id: new ObjectId(id) };
-      const update = { $inc: { enrolledStudents: 1 } };
-      // const options = { upsert: true };
-      // const update = {
-      //   $set: {
-      //     enrolledStudents: body.enrolledStudents,
-      //   },
-      // };
 
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $inc: { enrolledStudents: 1 },
+        $set: {},
+      };
+      if (body.status) {
+        update.$set.status = body.status;
+      }
+      if (body.feedback) {
+        update.$set.feedback = body.feedback;
+      }
       try {
         const result = await classesCollection.updateOne(query, update);
         console.log(result);
